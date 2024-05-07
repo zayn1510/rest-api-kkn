@@ -10,7 +10,7 @@ import org.springframework.http.ResponseEntity;
 
 public interface AuthentificationInterface {
     ResponseEntity<ResponseApi> signUp(SignUpDto sign);
-    LoginResponse login(SignInDto sign);
+    ResponseEntity<LoginResponse> login(SignInDto sign);
     LoginResponse refreshTOken(RefreshTokenDto refresh);
     ResponseEntity<ResponseApi> createAdmin(SignUpDto sign);
 

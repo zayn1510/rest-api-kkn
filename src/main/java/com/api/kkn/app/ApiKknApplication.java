@@ -11,7 +11,7 @@ import org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfi
 import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
-@SpringBootApplication()
+@SpringBootApplication(exclude = SecurityAutoConfiguration.class)
 public class ApiKknApplication implements CommandLineRunner {
 
 

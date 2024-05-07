@@ -52,15 +52,24 @@ public class AuthentficationService implements AuthentificationInterface {
         return new ResponseEntity<>(new ResponseApi("nim tidak ditemukan",false),HttpStatus.OK);
     }
 
-    public LoginResponse login(SignInDto signIn) {
+    public ResponseEntity<LoginResponse> login(SignInDto signIn) {
 
-        var user=userRepository.findByEmail(signIn.getEmail()).orElseThrow(()->new IllegalArgumentException("invalid email"));
+        var checkemail=userRepository.findByEmail(signIn.getEmail());
+        if(checkemail.isEmpty()){
+            return new ResponseEntity<>(new LoginResponse("login gagal",false,null,null),HttpStatus.OK);
+        }
+        var user=userRepository.findByEmail(signIn.getEmail()).orElseThrow();
         var jwt=jwtService.generateToken(user);
         var refreshToken=jwtService.generateRefreshToken(new HashMap<>(),user);
         user.setToken(jwt);
         userRepository.save(user);
-        authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(user.getUsername(), signIn.getPassword()));
-        return new LoginResponse(jwt,refreshToken);
+        try{
+            authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(user.getUsername(), signIn.getPassword()));
+            return new ResponseEntity<>(new LoginResponse("Login berhasil",true,jwt,refreshToken),HttpStatus.OK);
+        }
+        catch (Exception e){
+            return new ResponseEntity<>(new LoginResponse(e.getMessage(),false,null,null),HttpStatus.OK);
+        }
     }
     @Override
     public LoginResponse refreshTOken(RefreshTokenDto refreshToken) {

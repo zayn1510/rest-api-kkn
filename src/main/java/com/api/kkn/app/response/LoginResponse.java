@@ -10,6 +10,8 @@ import lombok.NoArgsConstructor;
 @Data
 @Builder
 public class LoginResponse {
+    private String message;
+    private Boolean success;
     private String token;
     private String refreshToken;
 

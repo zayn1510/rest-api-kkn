@@ -8,22 +8,22 @@ import com.api.kkn.app.response.LoginResponse;
 import com.api.kkn.app.response.ResponseApi;
 import com.api.kkn.app.services.AuthentficationService;
 import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
-
+import org.springframework.web.bind.annotation.*;
 
 
 @RestController
 @RequestMapping("api/v1/auth")
+@RequiredArgsConstructor
 public class AuthController {
 
 
     private final AuthentficationService authentficationService;
-    public AuthController(AuthentficationService authentficationService) {
-        this.authentficationService = authentficationService;
+
+    @GetMapping("/welcome")
+    public String welcome(){
+        return "Welcome";
     }
 
     @PostMapping("/signup")
@@ -32,7 +32,7 @@ public class AuthController {
     }
     @PostMapping("/signin")
     public ResponseEntity<LoginResponse> signin(@RequestBody SignInDto signInDto) {
-        return ResponseEntity.ok(authentficationService.login(signInDto));
+        return authentficationService.login(signInDto);
     }
     @PostMapping("/refresh")
     public ResponseEntity<LoginResponse> refreshToken(@RequestBody RefreshTokenDto refreshTokenDto) {
