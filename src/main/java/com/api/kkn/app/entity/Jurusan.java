@@ -2,25 +2,22 @@ package com.api.kkn.app.entity;
 
 
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
 
+import java.io.Serializable;
 import java.util.List;
 
 @Table(name = "tbl_jurusan")
-@Entity(name = "tbl_jurusan")
+@Entity
 @AllArgsConstructor
 @NoArgsConstructor
-@Getter
-@Setter
-public class Jurusan {
+@Data
+public class Jurusan implements Serializable {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "id_jurusan")
     private Integer idJurusan;
-    @OneToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "id_fakultas")
     private Fakultas fakultas;
 

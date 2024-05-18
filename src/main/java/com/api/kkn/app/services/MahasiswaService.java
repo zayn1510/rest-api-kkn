@@ -11,6 +11,8 @@ import com.api.kkn.app.response.ResponseApi;
 
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -29,13 +31,17 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
 public class MahasiswaService implements MahasiswaInterface {
 
     private final MahasiswaRepository mahasiswaRepository;
+    private final static String CACHE_NAME="mahasiswa";
+    private final static String KEY_NAME="'allmahasiswa'";
 
+    @CacheEvict(value =CACHE_NAME,allEntries = true)
     @SneakyThrows
     @Override
     public ResponseEntity<ResponseApi> insertMahasiswa(MahasiswaDto mahasiswaDto, MultipartFile foto) {
@@ -60,16 +66,13 @@ public class MahasiswaService implements MahasiswaInterface {
         return new ResponseEntity<>(new ResponseApi("success",true), HttpStatus.OK);
     }
 
+    @CacheEvict(value = CACHE_NAME,allEntries = true)
     @SneakyThrows
     @Override
     public ResponseEntity<ResponseApi> updateMahasiswa(MahasiswaDto mahasiswaDto, MultipartFile foto) {
-
-
-
         if(mahasiswaRepository.findByNimMhs(mahasiswaDto.getNimMhs()) ==null){
             return new ResponseEntity<>(new ResponseApi("nim tidak ditemukan",false),HttpStatus.OK);
         }
-
         String filename=null;
         // check its real image
         if (!foto.isEmpty()) {
@@ -86,6 +89,7 @@ public class MahasiswaService implements MahasiswaInterface {
         return new ResponseEntity<>(new ResponseApi("success",true), HttpStatus.OK);
     }
 
+    @CacheEvict(value = CACHE_NAME,allEntries = true)
     @Override
     public ResponseEntity<ResponseApi> deleteMahasiswa(Integer id) {
         if(mahasiswaRepository.findById(id).isEmpty()){
@@ -95,30 +99,46 @@ public class MahasiswaService implements MahasiswaInterface {
         return new ResponseEntity<>(new ResponseApi("success",true), HttpStatus.OK);
     }
 
+    @Cacheable(value = CACHE_NAME,key = KEY_NAME)
     @Override
     public ResponseEntity<DataResponse> getMahasiswa(Integer pagenumber,Integer pagesize) {
-        Pageable pageable=PageRequest.of(pagenumber,pagesize, Sort.by("idMhs").descending());
-        Page<Mahasiswa> data=mahasiswaRepository.findAll(pageable);
-        List<MahasiswaResponse> list=new ArrayList<>();
-        for(Mahasiswa mahasiswa:data){
-            MahasiswaResponse mahasiswaResponse=new MahasiswaResponse();
-            mahasiswaResponse.setId_mhs(mahasiswa.getIdMhs());
-            mahasiswaResponse.setNim_mhs(mahasiswa.getNimMhs());
-            mahasiswaResponse.setNama_mhs(mahasiswa.getNamaMhs());
-            mahasiswaResponse.setEmail_mhs(mahasiswa.getEmailMhs());
-            mahasiswaResponse.setAngkatan_mhs(mahasiswa.getAngkatanMhs());
-            mahasiswaResponse.setNomor_hp_mhs(mahasiswa.getNomorHpMhs());
-            mahasiswaResponse.setTempat_lahir_mhs(mahasiswa.getTempatLahirMhs());
-            mahasiswaResponse.setTgl_lahir_mhs(mahasiswa.getTglLahirMhs());
-            JurusanResponse jurusanResponse=new JurusanResponse();
-            jurusanResponse.setId_jurusan(mahasiswa.getJurusan().getIdJurusan());
-            jurusanResponse.setKode_jurusan(mahasiswa.getJurusan().getKodeJurusan());
-            jurusanResponse.setNama_jurusan(mahasiswa.getJurusan().getNamaJurusan());
-            mahasiswaResponse.setJurusan(jurusanResponse);
-            list.add(mahasiswaResponse);
-        }
+        Integer PAGE_OVER=100;
+        List<MahasiswaResponse> list=(pagesize>PAGE_OVER)
+                ? loadDataFromDatabase(pagenumber,pagesize)
+                : loadDataFromCache(pagenumber,pagesize);
         return new ResponseEntity<>(new DataResponse("success",true,list),HttpStatus.OK);
+    }
 
+    @Override
+    public List<MahasiswaResponse> loadDataFromDatabase(Integer pagenumber, Integer pagesize) {
+        Pageable pageable=PageRequest.of(pagenumber,pagesize, Sort.by("idMhs").descending());
+        Page<Mahasiswa> data=mahasiswaRepository.findAllWithJurusan(pageable);
+        return data.stream()
+                .map(mahasiswa -> {
+                    MahasiswaResponse mahasiswaResponse = new MahasiswaResponse();
+                    mahasiswaResponse.setId_mhs(mahasiswa.getIdMhs());
+                    mahasiswaResponse.setNim_mhs(mahasiswa.getNimMhs());
+                    mahasiswaResponse.setNama_mhs(mahasiswa.getNamaMhs());
+                    mahasiswaResponse.setEmail_mhs(mahasiswa.getEmailMhs());
+                    mahasiswaResponse.setAngkatan_mhs(mahasiswa.getAngkatanMhs());
+                    mahasiswaResponse.setNomor_hp_mhs(mahasiswa.getNomorHpMhs());
+                    mahasiswaResponse.setTempat_lahir_mhs(mahasiswa.getTempatLahirMhs());
+                    mahasiswaResponse.setTgl_lahir_mhs(mahasiswa.getTglLahirMhs());
+
+                    JurusanResponse jurusanResponse = new JurusanResponse();
+                    jurusanResponse.setId_jurusan(mahasiswa.getJurusan().getIdJurusan());
+                    jurusanResponse.setKode_jurusan(mahasiswa.getJurusan().getKodeJurusan());
+                    jurusanResponse.setNama_jurusan(mahasiswa.getJurusan().getNamaJurusan());
+
+                    mahasiswaResponse.setJurusan(jurusanResponse);
+                    return mahasiswaResponse;
+                })
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public List<MahasiswaResponse> loadDataFromCache(Integer pagenumber, Integer pagesize) {
+        return List.of();
     }
 
     @SneakyThrows

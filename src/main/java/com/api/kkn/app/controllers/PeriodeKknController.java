@@ -22,8 +22,6 @@ public class PeriodeKknController {
     @GetMapping("/{pageNumber}/{pageSize}")
     ResponseEntity<DataResponse> getData(@PathVariable("pageNumber") Integer pageNumber,@PathVariable("pageSize") Integer pageSize)
     {
-        logPublisher.publishLogEvent("Lihat data periode kkn via API");
-
         return periodeKknService.get_data(pageNumber,pageSize);
     }
 
@@ -34,13 +32,10 @@ public class PeriodeKknController {
     }
     @PutMapping("/{id}")
     ResponseEntity<ResponseApi> updateData(@PathVariable("id") Integer id,@Valid @RequestBody PeriodeKknDto periodeKknDto){
-        logPublisher.publishLogEvent("Update data periode kkn via API");
         return periodeKknService.update_data(id,periodeKknDto);
     }
     @DeleteMapping("/{id}")
     ResponseEntity<ResponseApi> deleteData(@PathVariable("id") Integer id){
-        logPublisher.publishLogEvent("Hapus data periode kkn via API");
         return periodeKknService.delete_data(id);
     }
-
 }

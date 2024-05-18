@@ -16,7 +16,6 @@ import org.springframework.stereotype.Service;
 @Service
 public class JwtService {
 
-
     public String generateToken(UserDetails userDetails) {
         return Jwts.builder().setSubject(userDetails.getUsername())
                 .setIssuedAt(new Date(System.currentTimeMillis()))
@@ -48,7 +47,8 @@ public class JwtService {
     }
 
     private Claims extractAllClaims(String token) {
-        return Jwts.parserBuilder().setSigningKey(getSecretKeys()).build().parseClaimsJws(token).getBody();
+
+        return Jwts.parser().setSigningKey(getSecretKeys()).build().parseClaimsJws(token).getBody();
     }
 
     public boolean validateToken(String token, UserDetails userDetails) {
