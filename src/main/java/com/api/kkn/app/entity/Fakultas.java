@@ -6,11 +6,9 @@ import lombok.*;
 import java.util.List;
 
 @Table(name = "tbl_fakultas")
-@Entity(name = "tbl_fakutlas")
+@Entity
 @AllArgsConstructor
 @NoArgsConstructor
-@Getter
-@Setter
 @Data
 @Builder
 public class Fakultas {

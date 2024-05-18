@@ -8,8 +8,9 @@ import com.api.kkn.app.response.DataResponse;
 import com.api.kkn.app.response.FakultasResponse;
 import com.api.kkn.app.response.JurusanResponse;
 import com.api.kkn.app.response.ResponseApi;
-import lombok.AllArgsConstructor;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -17,33 +18,16 @@ import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
-
-import java.util.ArrayList;
 import java.util.List;
 
 @Service
 @RequiredArgsConstructor
 public class JurusanService implements JurusanInterface {
     private final JurusanRepository jurusanRepository;
-    @Override
-    public ResponseEntity<DataResponse> get_data(Integer pageNumber,Integer pageSize) {
+    private static final  String CACHE_NAME="jurusan";
+    private static final Integer PAGE_OVER=100;
 
-        Pageable pageable= PageRequest.of(pageNumber,pageSize,Sort.by(Sort.Direction.DESC,"idJurusan"));
-        Page<Jurusan> data = jurusanRepository.findAll(pageable);
-        List< JurusanResponse> list=new ArrayList<>();
-        for(Jurusan jurusan:data){
-            JurusanResponse jurusanResponse=new JurusanResponse();
-            jurusanResponse.setId_jurusan(jurusan.getIdJurusan());
-            jurusanResponse.setKode_jurusan(jurusan.getKodeJurusan());
-            jurusanResponse.setNama_jurusan(jurusan.getNamaJurusan());
-            Fakultas fakultas=jurusan.getFakultas();
-            FakultasResponse fakultasResponse=new FakultasResponse(fakultas.getIdFakultas(),fakultas.getKodeFakultas(),fakultas.getNamaFakultas());
-            jurusanResponse.setFakultas(fakultasResponse);
-            list.add(jurusanResponse);
-        }
-        return new ResponseEntity<>(new DataResponse("success",true,list),HttpStatus.OK);
-    }
-
+    @CacheEvict(value = CACHE_NAME, allEntries = true)
     @Override
     public ResponseEntity<ResponseApi> insert_data(JurusanDto jurusanDto) {
         Jurusan jurusan=new Jurusan();
@@ -55,7 +39,7 @@ public class JurusanService implements JurusanInterface {
         jurusanRepository.save(jurusan);
         return new ResponseEntity<>(new ResponseApi("success",true),HttpStatus.CREATED);
     }
-
+    @CacheEvict(value =CACHE_NAME, allEntries = true)
     @Override
     public ResponseEntity<ResponseApi> update_data(Integer id, JurusanDto jurusanDto) {
         // check first data exist or not
@@ -71,6 +55,7 @@ public class JurusanService implements JurusanInterface {
         return new ResponseEntity<>(new ResponseApi("success",true),HttpStatus.CREATED);
     }
 
+    @CacheEvict(value = CACHE_NAME, allEntries = true)
     @Override
     public ResponseEntity<ResponseApi> delete_data(Integer id) {
         // check first data exist or not
@@ -79,5 +64,42 @@ public class JurusanService implements JurusanInterface {
         }
         jurusanRepository.deleteById(id);
         return new ResponseEntity<>(new ResponseApi("success",true),HttpStatus.OK);
+    }
+
+
+
+    @Cacheable(value = CACHE_NAME,key = "'alljurusan'")
+    @Override
+    public ResponseEntity<DataResponse> get_data(Integer pageNumber, Integer pageSize) {
+        List<JurusanResponse> list=(pageSize > PAGE_OVER)
+                ? loadFromDatabase(pageNumber, pageSize)
+                : loadFromCache(pageNumber, pageSize);
+        return new ResponseEntity<>(new DataResponse("success", true, list), HttpStatus.OK);
+    }
+    @Override
+    public List<JurusanResponse> loadFromDatabase(Integer pageNumber, Integer pageSize) {
+        Pageable pageable = PageRequest.of(pageNumber, pageSize, Sort.by(Sort.Direction.DESC, "idJurusan"));
+        Page<Jurusan> data = jurusanRepository.findAllWithFakultas(pageable);
+        return data.stream()
+                .map(jurusan -> {
+                    Fakultas fakultas = jurusan.getFakultas();
+                    FakultasResponse fakultasResponse = new FakultasResponse(
+                            fakultas.getIdFakultas(),
+                            fakultas.getKodeFakultas(),
+                            fakultas.getNamaFakultas()
+                    );
+                    return new JurusanResponse(
+                            jurusan.getIdJurusan(),
+                            jurusan.getKodeJurusan(),
+                            jurusan.getNamaJurusan(),
+                            fakultasResponse
+                    );
+                })
+                .toList();
+    }
+
+    @Override
+    public List<JurusanResponse> loadFromCache(Integer pageNumber, Integer pageSize) {
+        return loadFromDatabase(pageNumber,pageSize);
     }
 }
